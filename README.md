@@ -173,7 +173,7 @@ Supports large candidate datasets using:
 
 ### Pagination View
 
-![Pagination View](./img1/pagination.png)
+![Pagination View](./img1/candidateview.png)
 
 > Create a folder named **`screenshots`** in the repo root and place your UI images there with these names:
 
