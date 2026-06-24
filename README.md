@@ -165,15 +165,15 @@ Supports large candidate datasets using:
 
 ### Candidate Listing Dashboard
 
-![Candidate Listing](./screenshots/candidate-list.png)
+![Candidate Listing](./img1/pagination.png)
 
 ### Advanced Filter Panel
 
-![Advanced Filters](./screenshots/candidate-filters.png)
+![Advanced Filters](./img1/filter.png)
 
 ### Pagination View
 
-![Pagination View](./screenshots/candidate-pagination.png)
+![Pagination View](./img1/pagination.png)
 
 > Create a folder named **`screenshots`** in the repo root and place your UI images there with these names:
 
