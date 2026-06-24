@@ -1,0 +1,714 @@
+<div class="col-sm-12">
+  <div class="custom-flex-header">
+    <mat-form-field appearance="outline" class="search-form-field" style="width: 60%">
+      <input matInput placeholder="Search candidates by Name, Email, Skills, Source" [(ngModel)]="searchText"
+        (ngModelChange)="onSearchChange($event)" />
+    </mat-form-field>
+    <div class="controls-inline">
+      <button matSuffix class="advanced-filter-btn" (click)="showRecruiterFilter()" aria-label="main">
+        <mat-icon class="me-1">filter_alt</mat-icon>
+        <span>Advanced Filters</span>
+      </button>
+
+      <div class="candidates-count">
+        <span>Total: {{ this.total || 0 }}</span>
+      </div>
+    </div>
+
+    <button *ngIf="isFilterActive()" mat-stroked-button class="back-button" (click)="resetFilters()">
+      <span class="material-symbols--refresh"></span>
+    </button>
+
+    <mat-menu #dateMenu="matMenu">
+      <button mat-menu-item (click)="setToday()">Today</button>
+      <button mat-menu-item (click)="setThisWeek()">This Week</button>
+      <button mat-menu-item (click)="setThisMonth()">This Month</button>
+      <div class="custom-filter-wrapper">
+        <button mat-menu-item (click)="toggleCustomDateFilter($event)">
+          Custom
+        </button>
+      </div>
+    </mat-menu>
+
+    <div *ngIf="showCustomDateFilter" class="calendar-filter" (click)="$event.stopPropagation()">
+      <label>From: <input type="date" [(ngModel)]="fromDate" /></label>
+      <label>To: <input type="date" [(ngModel)]="toDate" /></label>
+      <button class="apply-btn" (click)="applyDateFilter()">Apply</button>
+      <button class="cancel-btn" (click)="cancelDateFilter()">Cancel</button>
+    </div>
+
+    <div *ngIf="isRecruiterFilterVisible" class="filter-section">
+      <div class="filter-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Select Recruiter</mat-label>
+          <mat-select [(ngModel)]="selectedRecruiter" (selectionChange)="onAnyFilterChanged()">
+            <mat-option [value]="null">All</mat-option>
+            <mat-option *ngFor="let r of recruiterList" [value]="r.id">{{
+              r.name
+              }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Min Experience (yrs)</mat-label>
+          <input matInput type="number" [(ngModel)]="minExp" (ngModelChange)="onAnyFilterChanged()" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Max Experience (yrs)</mat-label>
+          <input matInput type="number" [(ngModel)]="maxExp" (ngModelChange)="onAnyFilterChanged()" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Location</mat-label>
+          <input matInput [(ngModel)]="location" (ngModelChange)="onAnyFilterChanged()" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Groups</mat-label>
+          <mat-select [(ngModel)]="selectedGroupIds" multiple (selectionChange)="onAnyFilterChanged()">
+            <mat-option *ngFor="let g of groupList; trackBy: trackByGroup" [value]="g.Groupid">
+              {{ g.GroupName }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Candidate Status</mat-label>
+          <mat-select [(ngModel)]="selectedCandidateStatusId" (selectionChange)="onAnyFilterChanged()">
+            <mat-option [value]="null">All</mat-option>
+            <mat-option *ngFor="let s of candidateStatuses" [value]="s.StatusID">
+              {{ s.StatusName }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Legal Status</mat-label>
+          <mat-select [(ngModel)]="selectedLegalStatusId" (selectionChange)="onAnyFilterChanged()">
+            <mat-option [value]="null">All</mat-option>
+            <mat-option *ngFor="let ls of legalStatuses" [value]="ls.LegalStatusID">
+              {{ ls.LegalStatusName }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Source</mat-label>
+          <mat-select [(ngModel)]="selectedSource" (selectionChange)="onAnyFilterChanged()">
+            <mat-option [value]="null">All</mat-option>
+            <mat-option *ngFor="let s of sourceOptions" [value]="s.value">
+              {{ s.label }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Start Date</mat-label>
+          <input matInput [matDatepicker]="startPicker" [(ngModel)]="startDate" (dateChange)="applyDatePickers()" />
+          <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+          <mat-datepicker #startPicker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>End Date</mat-label>
+          <input matInput [matDatepicker]="endPicker" [(ngModel)]="endDate" (dateChange)="applyDatePickers()" />
+          <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+          <mat-datepicker #endPicker></mat-datepicker>
+        </mat-form-field>
+      </div>
+
+      <div class="filter-actions">
+        <button mat-stroked-button (click)="resetRecruiterFilter()">
+          Reset
+        </button>
+        &nbsp; &nbsp;
+        <button mat-raised-button color="primary" (click)="closeRecruiterFilter()">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <mat-menu #experienceMenu="matMenu">
+    <ng-template matMenuContent>
+      <div (click)="$event.stopPropagation()" style="padding: 12px; width: 250px; background-color: #f5f5f5">
+        <label style="display: block; margin-bottom: 8px">
+          Min Experience:
+          <input type="number" [(ngModel)]="minExperience" min="0" style="width: 100%" />
+        </label>
+        <label style="display: block; margin-bottom: 8px">
+          Max Experience:
+          <input type="number" [(ngModel)]="maxExperience" min="0" style="width: 100%" />
+        </label>
+        <div style="text-align: right; margin-top: 10px">
+          <button mat-raised-button color="primary" (click)="applyExperienceFilter()">
+            Apply
+          </button>
+          <button mat-button color="warn" (click)="cancelExperienceFilter()">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </ng-template>
+  </mat-menu>
+</div>
+<div *ngIf="showDateRange" class="col-sm-12">
+  <mat-form-field appearance="fill">
+    <mat-label>Select date range</mat-label>
+    <mat-date-range-input [rangePicker]="picker">
+      <input matStartDate placeholder="Start date" />
+      <input matEndDate placeholder="End date" />
+    </mat-date-range-input>
+    <mat-date-range-picker #picker></mat-date-range-picker>
+  </mat-form-field>
+  <div class="mt-2">
+    <button mat-raised-button color="primary">Apply</button>
+    <button mat-button>Clear</button>
+  </div>
+</div>
+<div *ngIf="!isLoading && pagedCandidates.length === 0" class="no-results-message">
+  No results found for the selected filter.
+</div>
+
+<div class="rows" [class.blurred]="selectedResume" [@cardStagger]>
+
+  <div class="colss" *ngFor="let candidate of pagedCandidates">
+    <div class="profile-card">
+      <!-- Tooltip icon -->
+      <!-- <span *ngIf="candidate.isAssigned" class="assign-info-icon" matTooltip="This candidate is assigned to a recruiter"
+        matTooltipPosition="above">
+        <mat-icon>info</mat-icon>
+      </span> -->
+
+      <div class="profile-image profile-initial">
+        {{
+        ((candidate.firstname || '').charAt(0) +
+        (candidate.lastname || '').charAt(0)) | uppercase
+        }}
+      </div>
+
+
+      <div class="profile-info">
+        <div class="profile-name">
+          <span class="line-md--account-small"></span>
+          {{ candidate.firstname | nameCap }} {{ candidate.lastname | nameCap }}
+        </div>
+        <div class="profile-title">
+          <span class="line-md--email"></span> {{ candidate.email }}
+        </div>
+        <div class="profile-b">
+          <span class="game-icons--skills"></span>
+          <p class="skills-text-inner">
+            {{ getSkillsText(candidate.skills) }}
+            <span *ngIf="hasMoreSkills(candidate.skills)">...</span>
+          </p>
+        </div>
+      </div>
+      <div class="profile-bio mt-2">
+        <div class="custom-select-container">
+          <mat-form-field appearance="outline" class="custom-mat-select"
+            *ngIf="!selectedGroupIds || selectedGroupIds.length === 0">
+            <mat-select [ngModel]="candidate.selectedGroupId ?? null" (ngModelChange)="onSelectGroup(candidate, $event)"
+              [compareWith]="compareGroupIds" placeholder="Select Group" [ngModelOptions]="{ standalone: true }">
+              <mat-option [value]="'add_new'" class="custom-add-option">
+                <span class="line-md--account-add"></span>
+                Add New Group
+              </mat-option>
+
+              <mat-option *ngFor="let g of groupList; trackBy: trackByGroup" [value]="g.Groupid">
+                {{ g.GroupName }}
+              </mat-option>
+
+              <mat-option *ngIf="groupList.length === 0" disabled>
+                No Groups Available
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div class="group-chips" *ngIf="
+            selectedGroupIds.length > 0 &&
+            getFilteredGroupNames(candidate).length > 0
+          ">
+          <mat-chip-listbox aria-label="Candidate Groups" class="group-chip-list">
+            <mat-chip *ngFor="
+                let gName of getFilteredGroupNames(candidate);
+                let i = index
+              " selected>
+              {{ gName }}
+            </mat-chip>
+          </mat-chip-listbox>
+        </div>
+
+        <!-- <p><strong>Phone:</strong> {{ candidate.phonenumber }}</p>
+        <p>
+          <strong>Location:</strong> {{ candidate.STATE_NAME }},
+          {{ candidate.CITY }}
+        </p>
+        <p><strong>Source:</strong> {{ candidate.source }}</p>
+        <p><strong>Experience:</strong> {{ candidate.experience }} years</p>
+        <p><strong>Recruiter:</strong> {{ candidate.recruiter_name }}</p>
+        <p *ngIf="candidate.isAssigned" class="assigned">
+          <strong> Candidate Reassigned to</strong>
+          {{ candidate.recruiter_name ? (': ' + candidate.recruiter_name) : ': a recruiter' }}
+        </p>
+        <p>
+          <strong>CreatedAt :</strong>
+          {{ candidate.createdtime | date : "short" }}
+        </p>
+        <div>
+          <p [ngClass]="{ clamp: !showFullText }">
+            <strong>Notes:</strong> {{ candidate.notes }}
+          </p>
+          <button *ngIf="candidate.notes?.length > 100" class="read-more-btn" (click)="toggleText()">
+            {{ showFullText ? "Read Less" : "Read More" }}
+          </button>
+        </div> -->
+        <div class="info-row">
+          <span class="label">Phone</span>
+          <span class="colon">:</span>
+          <span class="value">{{ candidate.phonenumber }}</span>
+        </div>
+
+        <div class="info-row">
+          <span class="label">Location</span>
+          <span class="colon">:</span>
+       <span
+  class="value location-text"
+  [matTooltip]="isLocationTruncated(candidate) ? getLocation(candidate) : ''"
+  matTooltipPosition="above">
+  {{ getLocation(candidate) }}
+</span>
+        </div>
+
+        <div class="info-row">
+          <span class="label">Source</span>
+          <span class="colon">:</span>
+          <span class="value">{{ candidate.source }}</span>
+        </div>
+
+        <div class="info-row">
+          <span class="label">Experience</span>
+          <span class="colon">:</span>
+          <span class="value">{{ candidate.experience }} years</span>
+        </div>
+
+        <div class="info-row">
+          <span class="label">Recruiter Name</span>
+          <span class="colon">:</span>
+          <span class="value">{{ candidate.recruiter_name }}</span>
+        </div>
+
+        <div class="info-row">
+          <span class="label">Created At</span>
+          <span class="colon">:</span>
+          <span class="value">
+            {{ candidate.createdtime | date : "short" }}
+          </span>
+        </div>
+
+
+        <div class="info-row notes-row">
+          <span class="label">Notes</span>
+          <span class="colon">:</span>
+
+          <div class="value">
+            <p [ngClass]="{ clamp: !showFullText }">
+              {{ candidate.notes }}
+            </p>
+
+            <button *ngIf="candidate.notes?.length > 100" class="read-more-btn" (click)="toggleText()">
+              {{ showFullText ? "Read Less" : "Read More" }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center mt-2">
+        <button class="social-btn twitter" (click)="toggleIcons(candidate.candidate_id)" [@iconFade]>
+          <span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+              <path
+                d="M320 208C289.1 208 264 182.9 264 152C264 121.1 289.1 96 320 96C350.9 96 376 121.1 376 152C376 182.9 350.9 208 320 208zM320 432C350.9 432 376 457.1 376 488C376 518.9 350.9 544 320 544C289.1 544 264 518.9 264 488C264 457.1 289.1 432 320 432zM376 320C376 350.9 350.9 376 320 376C289.1 376 264 350.9 264 320C264 289.1 289.1 264 320 264C350.9 264 376 289.1 376 320z" />
+            </svg>
+          </span>
+        </button>
+      </div>
+
+      <div class="social-links " [ngClass]="{ 'assigned': candidate.isAssigned }"
+        *ngIf="activeIconCandidateId === candidate.candidate_id" [@iconFade]>
+        <button class="social-btn twitter" (click)="CandidateDetails(candidate.candidate_id)"
+          matTooltip="View candidate">
+          <span class="line-md--watch-loop"></span>
+        </button>
+        <button class="social-btn instagram" (click)="openNotesModal(candidate.candidate_id)" matTooltip="Add Notes">
+          <span class="line-md--text-box" aria-label="Add Notes"></span>
+        </button>
+        <button matTooltip="View Resume" class="social-btn linkedin" (click)="viewCandidate(candidate.candidate_id,candidate.firstname,candidate.lastname)">
+          <span class="healthicons--i-documents-accepted"></span>
+        </button>
+
+        <button class="social-btn github" (click)="openjobassignmodal(candidate.candidate_id)" matTooltip="Assign Job">
+          <span class="streamline-freehand--job-briefcase-document"></span>
+        </button>
+        <button mat-icon-button (click)="
+            candidate.is_talent_bench
+              ? null
+              : ChkPlacementaToTalentBench(candidate.candidate_id)
+          " [attr.aria-disabled]="candidate.is_talent_bench" class="tb-action"
+          [ngClass]="{ 'is-bench': candidate.is_talent_bench }" [matTooltip]="
+            candidate.is_talent_bench
+              ? 'Already in Talent Bench'
+              : 'Move to Talent Bench'
+          ">
+          <mat-icon *ngIf="!candidate.is_talent_bench">group_add</mat-icon>
+          <mat-icon *ngIf="candidate.is_talent_bench">verified</mat-icon>
+        </button>
+        <button matTooltip="Delete Candidate" class="social-btn github" (click)="
+            openDeleteModal(deletecandidateDialog, candidate.candidate_id)
+          ">
+          <span class="line-md--trash"></span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="page">
+  <mat-paginator [length]="total" [pageSize]="pageSize" [pageIndex]="pageIndex"
+    [pageSizeOptions]="[12, 30, 50, 70, 100]" (page)="onPageChange($event)" showFirstLastButtons>
+  </mat-paginator>
+</div>
+<div *ngIf="selectedResume" class="resume-overlay" (click)="closeResume()">
+  <iframe class="resume-frame" [src]="selectedResume | safeUrl" title="Resume" (click)="$event.stopPropagation()"
+    (load)="onResumeLoaded()">
+  </iframe>
+
+  <!-- <button class="resume-btn resume-btn--download" type="button" aria-label="Download Resume"
+    (click)="$event.stopPropagation(); downloadResume()">
+    <mat-icon>picture_as_pdf</mat-icon>
+  </button> -->
+<button
+  class="resume-btn resume-btn--downloaddoc"
+  type="button"
+  aria-label="Download DOCX"
+  (click)="$event.stopPropagation(); downloadResumeDocx()">
+
+  <mat-icon>download</mat-icon>
+</button>
+  <button class="resume-btn resume-btn--close" type="button" (click)="closeResume()" aria-label="Close Preview">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+<div *ngIf="showNotesModal" class="resume-modal">
+  <div class="resume-content" style="max-width: 700px; width: 100%; height: 75%">
+    <button class="close-btn" (click)="closeNotesModal()" aria-label="Close">
+      &times;
+    </button>
+
+    <ng-container *ngIf="lastNotes?.length > 0">
+      <h4 style="margin-bottom: 12px; font-weight: 500; color: #0b3d91">
+        Previous Notes
+      </h4>
+      <div *ngFor="let note of lastNotes" class="previous-note-card">
+        <mat-card appearance="outlined" class="note-card">
+          <mat-card-content>
+            <div class="note-meta">
+              <span class="note-date">
+                Updated on {{ note.created_time | date : "medium" }}
+              </span>
+              <span class="note-user">
+                by
+                <strong>{{
+                  note.created_by == 0 || !note.firstName
+                  ? "Candidate"
+                  : note.firstName + " " + note.lastName
+                  }}</strong>
+              </span>
+            </div>
+
+            <div class="note-body" [ngClass]="{ truncated: !note.expanded, expanded: note.expanded }"
+              (click)="toggleNoteExpansion(note)">
+              <p>{{ note.notes }}</p>
+              <span *ngIf="!note.expanded && isTruncated(note.notes)" class="read-more">...</span>
+              <span *ngIf="note.expanded" class="read-less">Read less</span>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </ng-container>
+
+    <h4 style="padding: 10px">Add Notes</h4>
+    <mat-form-field appearance="outline" class="w-100" color="primary">
+      <textarea matInput rows="5" [(ngModel)]="notesText" placeholder="Type your notes here..."></textarea>
+    </mat-form-field>
+
+    <div style="margin-top: 16px; text-align: right">
+      <button mat-flat-button class="m-l-8" color="primary" (click)="saveNotes()">
+        Save
+      </button>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="jobassignmodal" class="resume-modal">
+  <app-callloader *ngIf="isloading"></app-callloader>
+  <div class="resume-content">
+    <button class="jobclose-btn" (click)="closejobassignmodal()" aria-label="Close">
+      &times;
+    </button>
+    <h4 style="padding: 10px">Assign Job</h4>
+
+    <div>
+      <div *ngIf="accesstype === '1'" class="mb-3">
+        <mat-label class="f-s-14 f-w-600 m-b-8 d-block">Org Division</mat-label>
+
+        <mat-form-field appearance="outline" class="w-100">
+          <mat-select [(ngModel)]="selectedOrgDiv" placeholder="Select Division">
+            <mat-option *ngIf="orgdivision.length === 0" disabled>
+              No divisions available
+            </mat-option>
+
+            <mat-option *ngFor="let division of orgdivision" [value]="division.id">
+              {{ division.division_name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <ng-container *ngIf="alljobs && alljobs.length > 0; else noJobs">
+        <div class="col-12" *ngFor="let job of alljobs">
+          <mat-card class="jobcard mb-3 p-3">
+            <div style="display: flex; justify-content: space-between">
+              <h5>{{ job.JobTitle }} - {{ job.JobId }}</h5>
+              <div class="flex items-center space-x-2 text-sm text-gray-500 mb-3">
+                <span><span class="f7--placemark-fill"></span> Remote •
+                  {{ job.JobType }}</span>
+              </div>
+              <div class="text-end">
+                <button mat-raised-button color="primary" (click)="assignJob(job.JobId)"
+                  [disabled]="accesstype === '1' && !selectedOrgDiv">
+
+                  <span class="line-md--briefcase-plus"></span>
+                </button>
+              </div>
+            </div>
+            <p class="text-muted" style="
+                max-height: 60px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              ">
+              {{
+              job.JobDescription.length > 100
+              ? (job.JobDescription | slice : 0 : 100) + "..."
+              : job.JobDescription
+              }}
+            </p>
+            <div class="flex items-center space-x-4 text-sm text-gray-500">
+              <span class="text-sm text-gray-500"><span class="mdi--access-time"></span> Posted
+                {{ getDaysAgo(job.CreatedAt) }} ago</span>
+            </div>
+          </mat-card>
+        </div>
+      </ng-container>
+      <ng-template #noJobs>
+        <div class="col-12">
+          <mat-card class="jobcard">
+            <div>No available jobs</div>
+          </mat-card>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+
+</div>
+<ng-template #deletecandidateDialog let-dialogRef>
+  <h2 mat-dialog-title>Confirm Delete</h2>
+  <mat-dialog-content>Are you sure you want to delete the Candidate</mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close>No</button>
+    <button mat-button color="warn" (click)="confirmDeleteCandidate(); dialogRef.close()">
+      Yes
+    </button>
+  </mat-dialog-actions>
+</ng-template>
+
+<div *ngIf="isResumeLoading" class="ai-loader-overlay">
+  <div class="ai-loader-content">
+    <div class="spinner"></div>
+    <div class="ai-loader-text">{{ resumeLoadingMessage }}</div>
+  </div>
+</div>
+<div class="modal-backdrop" *ngIf="showModal()">
+  <app-callloader *ngIf="isloading"></app-callloader>
+  <div class="modal-group">
+    <h3>Create Group</h3>
+    <mat-form-field appearance="outline" class="w-100">
+      <mat-label>Group Name</mat-label>
+      <input matInput [(ngModel)]="name" placeholder="Enter group name" />
+
+      <mat-error *ngIf="isDuplicateName()">
+        This group name already exists
+      </mat-error>
+    </mat-form-field>
+
+    <div *ngIf="accesstype === '1'">
+      <mat-form-field appearance="outline" class="w-100">
+        <mat-label>Org Division</mat-label>
+
+        <mat-select [(ngModel)]="selectedorgdiv">
+          <mat-option *ngIf="orgdivision.length === 0" disabled>
+            No divisions available
+          </mat-option>
+
+          <mat-option *ngFor="let division of orgdivision" [value]="division.id">
+            {{ division.division_name }}
+          </mat-option>
+        </mat-select>
+
+        <mat-error *ngIf="!selectedorgdiv">
+          Please select a division
+        </mat-error>
+      </mat-form-field>
+    </div>
+
+    <div class="actions">
+      <button (click)="submit()" [disabled]="
+          !name?.trim() || 
+          isDuplicateName() || 
+          (accesstype === '1' && !selectedorgdiv)
+        ">
+        Submit
+      </button>
+
+      <button class="cancel" (click)="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<section *ngIf="showMoveModel" class="tb-modal" (click)="resetModel()">
+  <mat-card class="tb-card mat-elevation-z8" (click)="$event.stopPropagation()">
+    <header class="tb-header">
+      <h2 class="tb-title">Valid placement details found</h2>
+      <p class="tb-subtitle">
+        Expand to review the placement details and provide the bench start date.
+      </p>
+    </header>
+
+    <mat-divider></mat-divider>
+
+    <mat-card-content class="tb-content">
+      <mat-accordion>
+        <mat-expansion-panel>
+          <mat-expansion-panel-header class="tb-panel-header">
+            <mat-panel-title>Placement details</mat-panel-title>
+            <mat-panel-description>Click to view all</mat-panel-description>
+          </mat-expansion-panel-header>
+
+          <mat-accordion displayMode="flat">
+            <mat-expansion-panel *ngFor="let r of modelRows; trackBy: trackByPlacementId" class="tb-placement">
+              <mat-expansion-panel-header>
+                <mat-panel-title class="tb-row-title">
+                  <span class="tb-job">{{ safe(r.JobTitle) }}</span>
+                </mat-panel-title>
+                <mat-panel-description class="tb-row-meta">
+                  <span class="tb-chip tb-chip--info">Placement:
+                    {{ r.PlacementDate | date : "mediumDate" }}</span>
+                  <span class="tb-chip tb-chip--info">
+                    Contract: {{ r.ContractStartDate | date : "mediumDate" }} →
+                    {{ r.ContractEndDate | date : "mediumDate" }}
+                  </span>
+                </mat-panel-description>
+              </mat-expansion-panel-header>
+              <div class="tb-grid tb-grid--single">
+                <mat-card class="tb-info tb-info--dense">
+                </mat-card>
+
+                <mat-card class="tb-info tb-info--dense" *ngIf="showClient(r)">
+                  <mat-card-header><mat-card-title>Client</mat-card-title></mat-card-header>
+                  <div class="tb-body">
+                    <div class="tb-field">
+                      <span> Name</span><strong>{{ safe(r.ClientName) }}</strong>
+                    </div>
+                    <div class="tb-field">
+                      <span> Phone</span><strong>{{ safe(r.ClientContactNo) || "—" }}</strong>
+                    </div>
+                    <div class="tb-field">
+                      <span> Email</span><strong>{{ safe(r.ClientEmail) }}</strong>
+                    </div>
+                  </div>
+                </mat-card>
+
+                <mat-card class="tb-info tb-info--dense" *ngIf="showPartner(r)">
+                  <mat-card-header><mat-card-title>Implementation Partner</mat-card-title></mat-card-header>
+                  <div class="tb-body">
+                    <div class="tb-field">
+                      <span> Name</span><strong>{{ safe(r.PartnerName) }}</strong>
+                    </div>
+                    <div class="tb-field">
+                      <span> Phone</span><strong>{{ safe(r.PartnerContactNo) || "—" }}</strong>
+                    </div>
+                    <div class="tb-field">
+                      <span> Email</span><strong>{{ safe(r.PartnerEmail) }}</strong>
+                    </div>
+                  </div>
+                </mat-card>
+
+                <mat-card class="tb-info tb-info--dense" *ngIf="showVendor(r)">
+                  <mat-card-header><mat-card-title>Vendor</mat-card-title></mat-card-header>
+                  <div class="tb-body">
+                    <div class="tb-field">
+                      <span> Name</span><strong>{{ safe(r.VendorName) }}</strong>
+                    </div>
+                    <div class="tb-field">
+                      <span> Phone</span><strong>{{ safe(r.VendorContactNo) || "—" }}</strong>
+                    </div>
+                    <div class="tb-field">
+                      <span> Email</span><strong>{{ safe(r.VendorEmail) }}</strong>
+                    </div>
+                  </div>
+                </mat-card>
+
+                <mat-card class="tb-info tb-info--dense" *ngIf="showSubVendor(r)">
+                  <mat-card-header><mat-card-title>Subvendor</mat-card-title></mat-card-header>
+                  <div class="tb-body">
+                    <div class="tb-field">
+                      <span>Name</span><strong>{{ safe(r.SubVendorName) }}</strong>
+                    </div>
+                    <div class="tb-field">
+                      <span>Phone</span><strong>{{ safe(r.SubVendorContactNo) || "—" }}</strong>
+                    </div>
+                    <div class="tb-field">
+                      <span>Email</span><strong>{{ safe(r.SubVendorEmail) }}</strong>
+                    </div>
+                  </div>
+                </mat-card>
+              </div>
+            </mat-expansion-panel>
+          </mat-accordion>
+        </mat-expansion-panel>
+      </mat-accordion>
+      <div class="tb-bench tb-flex">
+        <mat-form-field appearance="outline" class="tb-date">
+          <mat-label>Candidate Bench From Date</mat-label>
+          <input matInput [matDatepicker]="benchPicker" [(ngModel)]="benchFromDate" name="benchFromDate" />
+          <mat-datepicker-toggle matSuffix [for]="benchPicker"></mat-datepicker-toggle>
+          <mat-datepicker #benchPicker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="tb-notes">
+          <mat-label>Notes</mat-label>
+          <textarea matInput rows="3" [(ngModel)]="benchNotes" name="benchNotes" placeholder="Enter notes"></textarea>
+        </mat-form-field>
+      </div>
+    </mat-card-content>
+    <mat-divider></mat-divider>
+    <mat-card-actions align="end" class="tb-actions">
+      <button mat-flat-button color="primary" (click)="resetModel()">
+        Close
+      </button>
+      <button mat-flat-button color="primary" (click)="moveWithCandidate()">
+        Move to Talent Bench
+      </button>
+    </mat-card-actions>
+  </mat-card>
+</section>
+<app-loader *ngIf="isLoading"></app-loader>
